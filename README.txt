@@ -1,9 +1,24 @@
-LEADPILOT WEBSITE — EDITABLE STATIC PROTOTYPE
+LEADPILOT — CLIENT-TESTING PROTOTYPE
 
-Deploy: upload index.html to the root of a GitHub repo, then import the repo in Netlify or Vercel. No build command is needed.
+Files
+- index.html: responsive marketing site + interactive browser demo.
 
-Edit: all design, copy, prices, form fields, and demo data are in index.html. Change visible "LeadPilot" text to rename. Edit plans in section id=pricing. Update the placeholder hello@example.com in the script before using the form.
+What you can test now
+- Mobile-friendly landing page with a problem-focused value proposition.
+- Demo dashboard: add/edit/delete sample leads, search/filter, see follow-up queue, view message draft starters, export CSV.
+- Simple monthly admin-time cost calculator (illustrative estimate only).
+- Proposed pricing interest form that opens a draft email.
 
-Important: this is a prototype, not a secure SaaS. It has a marketing page, hamburger navigation, proposed pricing cards, a demo lead dashboard, browser-only lead storage, basic lead CRUD, filtering, CSV export, and message draft examples. It does NOT have secure login/signup, a shared database, actual AI/API calls, live Google Sheets sync, payment processing, or an online form backend. Do not add real confidential customer data. Never put API keys in index.html.
+Important limitations
+This is NOT yet a production SaaS. There is no real signup/login, secure multi-user cloud database, Google Sheets OAuth/sync, live AI API, automatic email sending, payment checkout, subscription management, cancellation/billing portal, or hosted form submission. Demo data is stored in the visitor's browser only. The form opens an email draft and does not send or save data online. Do not enter real customer personal data.
 
-Before selling subscriptions: configure authentication + database row-level access controls, secure server-side Google Sheets/OAuth integration, an online form backend, AI provider server-side calls, and a hosted payment provider with server-side subscription verification. Proposed prices ($9/$29) are only test hypotheses, not validated market prices.
+Before charging customers
+1. Interview target users and observe whether the demo solves a frequent, expensive problem.
+2. Build secure authentication and per-user/team database access.
+3. Implement and test Google Sheets/CSV import, live AI drafts with protected server-side API keys, and reliable reminders.
+4. Add a payment provider with subscription creation, webhooks, billing portal, cancellation and refund/support terms.
+5. Add privacy policy, terms, security checks, data deletion/export, and support contact.
+6. Run a small pilot; only describe features as available after they work end-to-end.
+
+Deploy
+Upload index.html to the root of the GitHub repository and enable GitHub Pages from branch main / root, or import the repository into Netlify.
