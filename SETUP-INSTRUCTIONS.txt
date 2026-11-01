@@ -1,0 +1,17 @@
+LEADPILOT — UPDATED WEBSITE FILES
+
+This version keeps your existing LeadPilot dashboard UI and adds Supabase email sign-up/sign-in, sign-out, loading the signed-in user's leads, and database-backed add/edit/delete.
+
+The Supabase publishable key you supplied is already configured in index.html. Do not paste it again. Never use a Secret API key or service_role key.
+
+Supabase project URL is already set to https://kpqjdegoqmxwmujolvho.supabase.co.
+
+DATABASE EXPECTATIONS
+The existing public.leads table should have: id (UUID or generated primary key), created_at, user_id, name, company, service_needed, budget, status, follow_up_date, notes. The code expects Supabase RLS to be enabled and policies to allow authenticated users to select/insert/update/delete only rows where auth.uid() = user_id.
+
+Before launch, verify policies: SELECT using (auth.uid() = user_id); INSERT with check (auth.uid() = user_id); UPDATE using and with check (auth.uid() = user_id); DELETE using (auth.uid() = user_id). Restrict policies to authenticated. Do not disable RLS.
+
+SIGN-UP NOTE
+If email confirmation is enabled, a new user must confirm their email before signing in. The Supabase Site URL/Redirect URL should include https://earnwithgudiya.github.io/leadpilot-website/ .
+
+This is a first integration build and has not been tested against your live Supabase database from this environment. After uploading, test sign-up/sign-in and one lead CRUD operation before relying on it. AI generation, billing/payments, Gmail integration, and scheduled automation are not included yet.
