@@ -4,7 +4,7 @@ This version keeps your existing LeadPilot dashboard UI and adds Supabase email 
 
 The Supabase publishable key you supplied is already configured in index.html. Do not paste it again. Never use a Secret API key or service_role key.
 
-Supabase project URL is already set to https://kpqjdegoqmxwmujolvho.supabase.co.
+Supabase project URL is already set to https://kpqjdegogmxwmujvolho.supabase.co.
 
 DATABASE EXPECTATIONS
 The existing public.leads table should have: id (UUID or generated primary key), created_at, user_id, name, company, service_needed, budget, status, follow_up_date, notes. The code expects Supabase RLS to be enabled and policies to allow authenticated users to select/insert/update/delete only rows where auth.uid() = user_id.
