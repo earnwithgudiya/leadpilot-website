@@ -109,8 +109,21 @@ function authMessage(msg,isError=false){$("authMessage").textContent=msg;$("auth
 async function loadLeads(){const {data,error}=await sb.from("leads").select("*").order("created_at",{ascending:false});if(error){toast("Could not load leads: "+error.message);return}leads=(data||[]).map(fromDb);nextId=leads.length+1;render()}
 async function enterWorkspace(user){currentUser=user;$("authGate").style.display="none";$("mainApp").style.visibility="visible";$("accountEmail").textContent=user.email||"Signed in";$("logoutBtn").style.display="inline-block";await loadLeads()}
 async function exitWorkspace(){currentUser=null;leads=[];$("mainApp").style.visibility="hidden";$("authGate").style.display="flex";$("accountEmail").textContent="Not signed in";$("logoutBtn").style.display="none";await sb.auth.signOut()}
-$("signInBtn").onclick=async()=>{const email=$("authEmail").value.trim(),password=$("authPassword").value;if(!email||!password){authMessage("Enter your email and password.",true);return}$("signInBtn").disabled=true;authMessage("Signing in…");const {data,error}=await sb.auth.signInWithPassword({email,password});$("signInBtn").disabled=false;if(error){authMessage(error.message,true);return}authMessage("");await enterWorkspace(data.user)};
-$("signUpBtn").onclick=async()=>{const email=$("authEmail").value.trim(),password=$("authPassword").value;if(!email||password.length<8){authMessage("Enter a valid email and a password of at least 8 characters.",true);return}$("signUpBtn").disabled=true;authMessage("Creating your account…");const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:"https://earnwithgudiya.github.io/leadpilot-website/"}});$("signUpBtn").disabled=false;if(error){authMessage(error.message,true);return}if(data.session){authMessage("Account created. Opening your workspace…");await enterWorkspace(data.user)}else{authMessage("Account created. Check your email to confirm, then sign in.")}};
+$("signInBtn").onclick=async()=>{const email=$("authEmail").value.trim(),password=$("authPassword").value;if(!email||!password){authMessage("Enter your email and password.",true);return}$("signInBtn").disabled=true;authMessage("Signing in…");const {data,error}=await sb.auth.signInWithPassword({email,password});$("signInBtn").disabled=false;if(error){authMessage(error.message,true);return}authMessage("");
+gtag('event', 'login', {method: 'email'});
+await enterWorkspace(data.user)};
+$("signUpBtn").onclick=async()=>{const email=$("authEmail").value.trim(),password=$("authPassword").value;if(!email||password.length<8){authMessage("Enter a valid email and a password of at least 8 characters.",true);return}$("signUpBtn").disabled=true;authMessage("Creating your account…");const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:"https://earnwithgudiya.github.io/leadpilot-website/"}});$("signUpBtn").disabled=false;if(error){authMessage(error.message,true);return}if(data.session){
+gtag('event', 'sign_up', {method: 'email'});
+authMessage("Account created. Opening your workspace…");
+await enterWorkspace(data.user)
+}if(data.session){
+gtag('event', 'sign_up', {method: 'email'});
+authMessage("Account created. Opening your workspace…");
+await enterWorkspace(data.user)
+}else{
+gtag('event', 'sign_up', {method: 'email'});
+authMessage("Account created. Check your email to confirm, then sign in.")
+}
 $("logoutBtn").onclick=exitWorkspace;
 sb.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_IN"&&session?.user&&currentUser?.id!==session.user.id)enterWorkspace(session.user);if(event==="SIGNED_OUT"&&currentUser)exitWorkspace()});
 (async()=>{const {data}=await sb.auth.getSession();if(data.session?.user)await enterWorkspace(data.session.user)})();
