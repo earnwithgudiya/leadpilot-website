@@ -1,35 +1,50 @@
-LEADPILOT V4 — INTERACTIVE FRONT-END PROTOTYPE
+LEADPILOT — SAFE UPDATE PACKAGE
 
-FILES
-- index.html: single-file responsive prototype.
-- README.txt: this guide.
+CONTENTS
+- index.html: updated single-file website.
+- index.original-backup.html: untouched copy of the HTML you uploaded.
+- supabase_activity_migration.sql: additive database migration for lead activity history.
+- README.txt: deployment and testing notes.
 
-WHAT WORKS IN THIS PROTOTYPE
-- Responsive dark SaaS interface with Overview, Lead Pipeline, Follow-up Queue, Draft Studio, Analytics, Capabilities, and proposed Pricing pages.
-- Add, edit, delete, search and filter leads.
-- Change lead stage.
-- Rule-based sample priority score (not AI).
-- Due/overdue follow-up queue.
-- Template-based editable follow-up draft preview, copy and download.
-- CSV import/export.
-- Browser localStorage persistence on the same browser/device.
-- Proposed $19/$49/$99 monthly plans shown for planning only.
+WHAT THIS UPDATE CHANGES
+1. Removes the duplicate sign-in click handler while retaining the existing Supabase email auth flow.
+2. Corrects the GA4 loader ID to G-6XBQRVEFHE (matching the config ID already in your supplied file).
+3. Removes hard-coded demo counts from the dashboard's initial HTML.
+4. Adds an Activity History page. Once the SQL migration is run, Supabase records lead creation, edits and deletion automatically.
+5. Makes the scoring and draft copy honest: current priority is rule-based and drafts are editable templates, not AI-generated content.
 
-IMPORTANT LIMITATIONS — NOT A PRODUCTION SAAS
-- No real AI API connection.
-- No login, cloud database, multi-user access, tenant isolation, or server-side security.
-- No Gmail or Google Sheets integration.
-- No payment checkout, subscription verification, or plan entitlement controls.
-- Demo data stays in the browser and may be lost if browser storage is cleared. Do not enter confidential or real customer data.
-- Pricing is proposed only; the page explicitly says checkout is not connected.
+WHAT IT DOES NOT CLAIM
+- No live AI generation is included. Do not put an AI provider secret key in browser code.
+- No Gmail sending, WhatsApp, payment checkout, subscription entitlement, or scheduled reminders are included.
+- This is not yet a fully production-ready commercial SaaS. Those require server-side functions, OAuth, verified payment webhooks, operational monitoring, backups, legal pages and testing.
 
-DEPLOY
-For a GitHub Pages static demo, replace the existing index.html with this index.html. Keep a copy of the previous file first. If uploading via phone, upload index.html at the repository root and commit the change. The README can also be uploaded at the root. GitHub Pages is appropriate for a non-commercial demo/portfolio, not as the production host for a commercial SaaS.
+DATA SAFETY
+- The SQL migration creates a separate lead_activities table and triggers. It does not delete, truncate, rename or rewrite public.leads.
+- Existing Supabase users, leads and RLS policies are not intentionally changed.
+- Keep RLS enabled. Never paste a Supabase service_role/secret key into index.html.
+- The included original-backup file is the exact HTML supplied for this update.
 
-NEXT PRODUCTION WORK (NOT INCLUDED IN THIS ZIP)
-1. Select a commercial-appropriate hosting/backend architecture.
-2. Implement authentication and per-customer database access controls.
-3. Implement server-side AI requests; never expose API keys in browser JavaScript.
-4. Implement OAuth and secure Gmail/Sheets integrations.
-5. Implement payment-provider checkout and server-side webhook verification before unlocking subscriptions.
-6. Add privacy policy, terms, cancellation/refund details, support contact, monitoring and backups.
+INSTALL
+A. Website
+1. Download and keep this ZIP as your rollback copy.
+2. In GitHub, open the LeadPilot repository and upload the new index.html at the repository root, replacing the old index.html.
+3. Do not upload index.original-backup.html as index.html. It is only a backup.
+4. Commit the change and open the GitHub Pages site after deployment.
+
+B. Activity history (optional but required for that page)
+1. Open Supabase > SQL Editor > New query.
+2. Open supabase_activity_migration.sql from this ZIP and copy all its contents.
+3. Run it once. It adds a separate table and triggers; it does not modify existing lead rows.
+4. Sign in to LeadPilot, add or edit a test lead, then open Activity history and tap Refresh.
+
+TEST CHECKLIST
+- Sign in with an existing account.
+- Confirm your old leads still appear.
+- Add a test lead, edit it, refresh the page and confirm persistence.
+- Verify a second account cannot see the first account's leads.
+- Test CSV export.
+- If activity migration is installed, verify create/update/delete activity entries.
+- Do not use confidential customer data until you have completed your own security and production review.
+
+IMPORTANT
+The source files supplied do not include a deployed backend/Edge Function for AI, Gmail, payments or scheduled automation. This package does not invent those integrations or pretend they are live.
