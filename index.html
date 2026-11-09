@@ -87,17 +87,7 @@
 <div class="toast" id="toast" role="status"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const demoLeads=[
-{id:1,name:"Rahul Sharma",business:"Digital Agency",service:"Website",budget:15000,status:"Follow-up",date:localDate(-2),notes:"Asked for a website proposal.",score:82},
-{id:2,name:"Maya Chen",business:"Bright Studio",service:"Lead generation",budget:28000,status:"Contacted",date:localDate(0),notes:"Interested in a lead generation workflow.",score:91},
-{id:3,name:"Daniel Brooks",business:"Northstar Consulting",service:"Automation",budget:42000,status:"New",date:localDate(1),notes:"Wants to reduce manual follow-up.",score:76},
-{id:4,name:"Priya Mehta",business:"PixelCraft",service:"Landing page",budget:12000,status:"Follow-up",date:localDate(-1),notes:"Requested a revised estimate.",score:88},
-{id:5,name:"Oliver Reed",business:"Reed & Co",service:"CRM setup",budget:35000,status:"Contacted",date:localDate(2),notes:"Asked about workflow integration.",score:63},
-{id:6,name:"Sara Williams",business:"Bloom Retail",service:"Email automation",budget:22000,status:"New",date:localDate(0),notes:"Exploring options.",score:73},
-{id:7,name:"Arjun Kapoor",business:"AK Media",service:"Website",budget:18000,status:"Won",date:localDate(0),notes:"Project confirmed.",score:96},
-{id:8,name:"Emma Wilson",business:"Evolve Labs",service:"Sales operations",budget:50000,status:"Lost",date:localDate(-5),notes:"No response after several attempts.",score:34},
-{id:9,name:"Noah Patel",business:"GrowthWorks",service:"AI workflow",budget:30000,status:"Follow-up",date:localDate(3),notes:"Asked to reconnect this week.",score:67}
-];
+
 function localDate(offset){let d=new Date();d.setDate(d.getDate()+offset);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")}
 const SUPABASE_URL="https://kpqjdegogmxwmujvolho.supabase.co";
 // Paste the Supabase publishable key from Project Settings > API Keys in the string below.
