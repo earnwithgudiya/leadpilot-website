@@ -192,14 +192,88 @@ $("mobileMenuBtn").textContent="☰ Menu";
 function openModal(l){$("leadForm").reset();$("editId").value=l?l.id:"";$("modalTitle").textContent=l?"Edit lead":"Add a lead";if(l){$("name").value=l.name;$("business").value=l.business;$("service").value=l.service||"";$("budget").value=l.budget||"";$("status").value=l.status;$("date").value=l.date||"";$("notes").value=l.notes||""} $("leadModal").classList.add("open");$("name").focus()}
 function editLead(id){let l=leads.find(x=>String(x.id)===String(id));if(l)openModal(l)}
 async function deleteLead(id){let l=leads.find(x=>String(x.id)===String(id));if(l&&confirm(`Delete ${l.name} from your LeadPilot account?`)){const {error}=await sb.from("leads").delete().eq("id",id);if(error){toast("Delete failed: "+error.message);return}leads=leads.filter(x=>String(x.id)!==String(id));render();toast("Lead deleted.")}}
+function showDraft(id){
+let l=leads.find(x=>String(x.id)===String(id));
+if(!l)return;
+go("drafts");
 
+let box=document.createElement("div");
+box.className="card";
+box.style.marginTop="15px";
+
+box.innerHTML=`<div class="card-head"><div><h2>Draft for ${esc(l.name)}</h2><p>${esc(l.business)} · ${esc(l.service||"Service not set")}</p></div><button class="btn" id="closeDraft">Close</button></div>
+<button class="btn primary" id="generateAIDraft" style="margin-bottom:12px;width:100%">✨ Generate with AI</button>
+
+  <textarea class="field" id="draftTextArea" style="width:100%;min-height:180px;white-space:pre-wrap">${esc(draftText(l))}</textarea>  <div class="form-actions"><button class="btn" id="copyDraft">Copy message</button><button class="btn primary" id="saveGmailDraft">Save to Gmail drafts</button></div>`;let old=$("activeDraft");
+if(old)old.remove();
+box.id="activeDraft";
+$("draftList").prepend(box);
+
+$("closeDraft").onclick=()=>box.remove();
+
+$("generateAIDraft").onclick=async()=>{
+const btn=$("generateAIDraft");
+btn.disabled=true;
+btn.textContent="Generating with AI...";
+
+try{
+  const {data,error}=await sb.functions.invoke("generate-draft",{
+    body:{lead_id:l.id}
+  });
+
+  if(error)throw new Error(error.message||"AI generation failed");
+  if(data?.error)throw new Error(data.error);
+  if(!data?.draft)throw new Error("No AI draft returned");
+
+  $("draftTextArea").value=data.draft;
+  toast("AI draft generated successfully!");
+}catch(e){
+  toast("AI Error: "+e.message);
+}finally{
+  btn.disabled=false;
+  btn.textContent="✨ Generate with AI";
+}
+
+};
+
+$("copyDraft").onclick=async()=>{
+try{
+await navigator.clipboard.writeText($("draftTextArea").value);
+toast("Draft copied. Review before sending.");
+}catch(e){
+$("draftTextArea").select();
+toast("Select the message and copy manually.");
+}
+};
+
+$("saveGmailDraft").onclick=async()=>{
+const btn=$("saveGmailDraft");
+const body=$("draftTextArea").value;
+btn.disabled=true;
+btn.textContent="Saving...";
+
+try{
+  const d=await gmailCall("create_draft",{
+    subject:`Following up — ${l.business||l.name}`,
+    body
+  });
+  toast("Draft saved in Gmail.");
+  if(d.gmailUrl)window.open(d.gmailUrl,"_blank","noopener");
+}catch(e){
+  toast("Gmail: "+e.message);
+}finally{
+  btn.disabled=false;
+  btn.textContent="Save to Gmail drafts";
+}
+
+};
+
+box.scrollIntoView({behavior:"smooth",block:"start"});
+ }
 async function gmailCall(action,payload={}){if(!currentUser)throw new Error("Please sign in first.");const {data,error}=await sb.functions.invoke("gmail-oauth",{body:{action,...payload}});if(error)throw new Error(error.message||"Gmail request failed");if(data?.error)throw new Error(data.error);return data||{}}
 async function refreshGmailStatus(){try{const d=await gmailCall("status");const connected=!!d.connected;$("gmailStatus").textContent=connected?`Connected${d.email?": "+d.email:""}`:"Not connected";$("gmailStatus").className="pill "+(connected?"green":"amber");$("connectGmailBtn").style.display=connected?"none":"inline-block";$("disconnectGmailBtn").style.display=connected?"inline-block":"none";$("gmailMessage").textContent=connected?"Gmail is connected. Follow-up drafts can be saved to this mailbox.":"Connect Gmail to enable saving drafts directly in Gmail."}catch(e){$("gmailStatus").textContent="Setup required";$("gmailMessage").textContent=e.message+". Check the Gmail Edge Function setup."}}
 $("connectGmailBtn").onclick=async()=>{const b=$("connectGmailBtn");b.disabled=true;$("gmailMessage").textContent="Preparing Google authorization…";try{const d=await gmailCall("connect");if(!d.authUrl)throw new Error("No Google authorization URL returned.");location.href=d.authUrl}catch(e){$("gmailMessage").textContent=e.message;b.disabled=false}};
-$("disconnectGmailBtn").onclick=async()=>{if(!confirm("Disconnect Gmail from this LeadPilot account?"))return;try{await gmailCall("disconnect");toast("Gmail disconnected.");await refreshGmailStatus()}catch(e){toast(e.message)}};
-$("refreshGmailBtn").onclick=refreshGmailStatus;
-
-function showDraft(id){let l=leads.find(x=>String(x.id)===String(id));if(!l)return;go("drafts");let box=document.createElement("div");box.className="card";box.style.marginTop="15px";box.innerHTML=`<div class="card-head"><div><h2>Draft for ${esc(l.name)}</h2><p>${esc(l.business)} · ${esc(l.service||"Service not set")}</p></div><button class="btn" id="closeDraft">Close</button></div><textarea class="field" id="draftTextArea" style="width:100%;min-height:180px;white-space:pre-wrap">${esc(draftText(l))}</textarea><div class="form-actions"><button class="btn" id="copyDraft">Copy message</button><button class="btn primary" id="saveGmailDraft">Save to Gmail drafts</button></div>`;let old=$("activeDraft");if(old)old.remove();box.id="activeDraft";$("draftList").prepend(box);$("closeDraft").onclick=()=>box.remove();$("copyDraft").onclick=async()=>{try{await navigator.clipboard.writeText($("draftTextArea").value);toast("Draft copied. Review it before sending.")}catch(e){$("draftTextArea").select();toast("Select the message and copy it manually.")}};$("saveGmailDraft").onclick=async()=>{const btn=$("saveGmailDraft"),body=$("draftTextArea").value;btn.disabled=true;btn.textContent="Saving…";try{const d=await gmailCall("create_draft",{subject:`Following up — ${l.business||l.name}`,body});toast("Draft saved in Gmail.");if(d.gmailUrl)window.open(d.gmailUrl,"_blank","noopener")}catch(e){toast("Gmail: "+e.message)}finally{btn.disabled=false;btn.textContent="Save to Gmail drafts"}};box.scrollIntoView({behavior:"smooth",block:"start"})}
+$("disconnectGmailBtn").onclick=async()=>{if(!confirm("Disconnect Gmail from this LeadPilot account?"))return;try{await gmailCall("disconnect");toast("Gmail disconnected.");await
 $("addLeadBtn").onclick=()=>openModal();$("cancelModal").onclick=()=>$("leadModal").classList.remove("open");$("leadModal").addEventListener("click",e=>{if(e.target===$("leadModal"))$("leadModal").classList.remove("open")});
 $("leadForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser){toast("Please sign in first.");return}let id=$("editId").value,old=leads.find(l=>String(l.id)===String(id));let l={id:id||null,name:$("name").value.trim(),business:$("business").value.trim(),service:$("service").value.trim(),budget:Number($("budget").value)||0,status:$("status").value,date:$("date").value,notes:$("notes").value.trim(),score:old?old.score:Math.min(90,50+(Number($("budget").value)>20000?15:0)+(["New","Follow-up"].includes($("status").value)?10:0))};let query=sb.from("leads");let result=old?await query.update(toDb(l)).eq("id",old.id).select().single():await query.insert(toDb(l)).select().single();if(result.error){toast("Could not save lead: "+result.error.message);return}const saved=fromDb(result.data);if(old)leads=leads.map(x=>String(x.id)===String(old.id)?saved:x);else leads.unshift(saved);$("leadModal").classList.remove("open");render();go("leads");toast(old?"Lead updated.":"Lead saved to your account.")});
 $("leadSearch" ).addEventListener("input",filterLeads);$("statusFilter").addEventListener("change",filterLeads);
