@@ -234,7 +234,19 @@ try{
   $("draftTextArea").value=data.draft;
   toast("AI draft generated successfully!");
 }catch(e){
-  toast("AI Error: "+e.message);
+  let msg = e.message || "Unknown error";
+
+  try {
+    if (e.context) {
+      const response = e.context.clone();
+      const details = await response.json();
+      msg = details.error || details.message || JSON.stringify(details);
+    }
+  } catch(err) {
+    console.log("Could not read error details:", err);
+  }
+
+  toast("AI Error: " + msg);
 }finally{
   btn.disabled=false;
   btn.textContent="✨ Generate with AI";
