@@ -199,94 +199,123 @@ $("connectGmailBtn").onclick=async()=>{const b=$("connectGmailBtn");b.disabled=t
 $("disconnectGmailBtn").onclick=async()=>{if(!confirm("Disconnect Gmail from this LeadPilot account?"))return;try{await gmailCall("disconnect");toast("Gmail disconnected.");await refreshGmailStatus()}catch(e){toast(e.message)}};
 $("refreshGmailBtn").onclick=refreshGmailStatus;
 function showDraft(id){
-let l=leads.find(x=>String(x.id)===String(id));
-if(!l)return;
-go("drafts");
+  let l=leads.find(x=>String(x.id)===String(id));
+  if(!l)return;
 
-let box=document.createElement("div");
-box.className="card";
-box.style.marginTop="15px";
+  go("drafts");
 
-box.innerHTML=`<div class="card-head"><div><h2>Draft for ${esc(l.name)}</h2><p>${esc(l.business)} · ${esc(l.service||"Service not set")}</p></div><button class="btn" id="closeDraft">Close</button></div>
-<button class="btn primary" id="generateAIDraft" style="margin-bottom:12px;width:100%">✨ Generate with AI</button>
+  let box=document.createElement("div");
+  box.className="card";
+  box.style.marginTop="15px";
 
-  <textarea class="field" id="draftTextArea" style="width:100%;min-height:180px;white-space:pre-wrap">${esc(draftText(l))}</textarea>  <div class="form-actions"><button class="btn" id="copyDraft">Copy message</button><button class="btn primary" id="saveGmailDraft">Save to Gmail drafts</button></div>`;let old=$("activeDraft");
-if(old)old.remove();
-box.id="activeDraft";
-$("draftList").prepend(box);
+  box.innerHTML=`
+    <div class="card-head">
+      <div>
+        <h2>Draft for ${esc(l.name)}</h2>
+        <p>${esc(l.business)} · ${esc(l.service||"Service not set")}</p>
+      </div>
+      <button class="btn" id="closeDraft">Close</button>
+    </div>
 
-$("closeDraft").onclick=()=>box.remove();
+    <button class="btn primary" id="generateAIDraft" style="margin-bottom:8px;width:100%">
+      ✨ Generate with AI
+    </button>
 
-$("generateAIDraft").onclick=async()=>{
-const btn=$("generateAIDraft");
-btn.disabled=true;
-btn.textContent="Generating with AI...";
+    <p id="aiDraftStatus" class="stat-note" role="status">
+      Your personalized starter message is ready.
+    </p>
 
-try{
-  const {data,error}=await sb.functions.invoke("generate-draft",{
-    body:{lead_id:l.id}
-  });
+    <textarea class="field" id="draftTextArea"
+      style="width:100%;min-height:180px;white-space:pre-wrap"></textarea>
 
-  if(error)throw new Error(error.message||"AI generation failed");
-  if(data?.error)throw new Error(data.error);
-  if(!data?.draft)throw new Error("No AI draft returned");
+    <div class="form-actions">
+      <button class="btn" id="copyDraft">Copy message</button>
+      <button class="btn primary" id="saveGmailDraft">Save to Gmail drafts</button>
+    </div>
+  `;
 
-  $("draftTextArea").value=data.draft;
-  toast("AI draft generated successfully!");
-}catch(e){
-  let msg = e.message || "Unknown error";
+  let old=$("activeDraft");
+  if(old)old.remove();
 
-  try {
-    if (e.context) {
-      const response = e.context.clone();
-      const details = await response.json();
-      msg = details.error || details.message || JSON.stringify(details);
+  box.id="activeDraft";
+  $("draftList").prepend(box);
+
+  const textarea=box.querySelector("#draftTextArea");
+  const aiButton=box.querySelector("#generateAIDraft");
+  const aiStatus=box.querySelector("#aiDraftStatus");
+
+  let starter=draftText(l);
+  textarea.value=starter;
+
+  $("closeDraft").onclick=()=>box.remove();
+
+  aiButton.onclick=()=>{
+    if(aiButton.dataset.running==="true")return;
+
+    aiButton.dataset.running="true";
+    aiButton.disabled=true;
+    aiButton.textContent="✨ AI is enhancing your message...";
+    aiStatus.textContent="Your starter message is ready. AI enhancement is running in the background.";
+
+    const originalStarter=textarea.value;
+
+    sb.functions.invoke("generate-draft",{
+      body:{lead_id:l.id}
+    }).then(({data,error})=>{
+      if(error)throw new Error(error.message||"AI generation failed");
+      if(data?.error)throw new Error(data.error);
+      if(!data?.draft)throw new Error("No AI draft returned");
+
+      if(textarea.value===originalStarter){
+        textarea.value=data.draft;
+        aiStatus.textContent="✓ AI-enhanced message is ready. Review it before sending.";
+        toast("AI draft generated successfully!");
+      }else{
+        aiStatus.textContent="AI enhancement finished. Your edited message was preserved.";
+      }
+    }).catch(error=>{
+      console.error("AI draft error:",error);
+      aiStatus.textContent="AI enhancement could not finish. Your starter message is still available.";
+      toast("AI enhancement failed. You can still use your starter draft.");
+    }).finally(()=>{
+      aiButton.disabled=false;
+      aiButton.dataset.running="false";
+      aiButton.textContent="✨ Generate with AI";
+    });
+  };
+
+  $("copyDraft").onclick=async()=>{
+    try{
+      await navigator.clipboard.writeText(textarea.value);
+      toast("Draft copied. Review before sending.");
+    }catch(e){
+      textarea.select();
+      toast("Select the message and copy manually.");
     }
-  } catch(err) {
-    console.log("Could not read error details:", err);
-  }
+  };
 
-  toast("AI Error: " + msg);
-}finally{
-  btn.disabled=false;
-  btn.textContent="✨ Generate with AI";
-}
+  $("saveGmailDraft").onclick=async()=>{
+    const btn=$("saveGmailDraft");
+    const body=textarea.value;
+    btn.disabled=true;
+    btn.textContent="Saving...";
 
-};
+    try{
+      const d=await gmailCall("create_draft",{
+        subject:`Following up — ${l.business||l.name}`,
+        body
+      });
+      toast("Draft saved in Gmail.");
+      if(d.gmailUrl)window.open(d.gmailUrl,"_blank","noopener");
+    }catch(e){
+      toast("Gmail: "+e.message);
+    }finally{
+      btn.disabled=false;
+      btn.textContent="Save to Gmail drafts";
+    }
+  };
 
-$("copyDraft").onclick=async()=>{
-try{
-await navigator.clipboard.writeText($("draftTextArea").value);
-toast("Draft copied. Review before sending.");
-}catch(e){
-$("draftTextArea").select();
-toast("Select the message and copy manually.");
-}
-};
-
-$("saveGmailDraft").onclick=async()=>{
-const btn=$("saveGmailDraft");
-const body=$("draftTextArea").value;
-btn.disabled=true;
-btn.textContent="Saving...";
-
-try{
-  const d=await gmailCall("create_draft",{
-    subject:`Following up — ${l.business||l.name}`,
-    body
-  });
-  toast("Draft saved in Gmail.");
-  if(d.gmailUrl)window.open(d.gmailUrl,"_blank","noopener");
-}catch(e){
-  toast("Gmail: "+e.message);
-}finally{
-  btn.disabled=false;
-  btn.textContent="Save to Gmail drafts";
-}
-
-};
-
-box.scrollIntoView({behavior:"smooth",block:"start"});
+  box.scrollIntoView({behavior:"smooth",block:"start"});
  }
 
 $("addLeadBtn").onclick=()=>openModal();$("cancelModal").onclick=()=>$("leadModal").classList.remove("open");$("leadModal").addEventListener("click",e=>{if(e.target===$("leadModal"))$("leadModal").classList.remove("open")});
