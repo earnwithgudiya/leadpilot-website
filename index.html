@@ -71,7 +71,7 @@ margin:8px 0;
     <div class="stats">
       <div class="card"><div class="stat-top"><span>Total leads</span><span class="stat-icon">◎</span></div><div class="stat-number" id="totalStat">—</div><div class="stat-note">Across your current pipeline</div></div>
       <div class="card"><div class="stat-top"><span>Need follow-up</span><span class="stat-icon">◷</span></div><div class="stat-number" id="followStat">—</div><div class="stat-note"><span class="good">Actionable</span> leads to review</div></div>
-      <div class="card"><div class="stat-top"><span>High priority</span><span class="stat-icon">↗</span></div><div class="stat-number" id="priorityStat">—</div><div class="stat-note">Rule-based estimate from saved lead details</div></div>
+      <div class="card"><div class="stat-top"><span>High priority</span><span class="stat-icon">↗</span></div><div class="stat-number" id="priorityStat">—</div><div class="stat-note">AI scores where available; otherwise estimates</div></div>
       <div class="card"><div class="stat-top"><span>Drafts ready</span><span class="stat-icon">✧</span></div><div class="stat-number" id="draftStat">—</div><div class="stat-note">Personalized drafts to review</div></div>
     </div>
     <div class="grid">
@@ -82,7 +82,7 @@ margin:8px 0;
     <p class="footnote">Your leads are stored in your private LeadPilot account. Keep your login details secure.</p>
   </section>
   <section class="view" id="leads"><div class="card table-card"><div class="table-top"><div><h2>All leads</h2><p style="margin:4px 0 0;color:var(--muted);font-size:12px">Manage your private pipeline.</p></div><div class="table-tools"><input id="leadSearch" class="field search" placeholder="Search leads..." aria-label="Search leads"><select id="statusFilter" class="field"><option value="">All statuses</option><option>New</option><option>Contacted</option><option>Follow-up</option><option>Won</option><option>Lost</option></select></div></div><div class="table-wrap"><table><thead><tr><th>Lead</th><th>Service</th><th>Budget</th><th>Status</th><th>Follow-up date</th><th>Score</th><th>Actions</th></tr></thead><tbody id="leadsTable"></tbody></table></div></div></section>
-  <section class="view" id="priority"><div class="card"><div class="card-head"><div><h2>Lead priority</h2><p>Priority scores are rule-based estimates, not AI predictions.</p></div><span class="pill amber">HIGHEST FIRST</span></div><div id="priorityList"></div></div></section>
+  <section class="view" id="priority"><div class="card"><div class="card-head"><div><h2>Lead priority</h2><p>AI scores appear after you run AI scoring; otherwise the estimate is shown.</p></div><span class="pill amber">HIGHEST FIRST</span></div><div id="priorityList"></div></div></section>
   <section class="view" id="followups"><div class="card"><div class="card-head"><div><h2>Follow-up queue</h2><p>Suggested actions based on each lead's status and follow-up date.</p></div><span class="pill blue" id="queueCount">0 OPEN</span></div><div id="queueList"></div></div></section>
   <section class="view" id="drafts"><div class="card"><div class="card-head"><div><h2>AI message drafts</h2><p>AI-generated drafts from your lead details. Review before sending.</p></div><button type="button" class="btn" onclick="document.getElementById('draftList').scrollIntoView({behavior:'smooth'});">EDIT BEFORE SENDING</button></div><div id="draftList"></div></div></section>
   <section class="view" id="settings"><div class="card" style="margin-bottom:16px"><div class="card-head"><div><h2>Gmail integration</h2><p>Connect your own Gmail account to save follow-up messages as drafts.</p></div><span class="pill amber" id="gmailStatus">Not connected</span></div><div class="notice">LeadPilot requests Gmail compose permission only. It creates drafts in Gmail; it does not send emails automatically. Review and send them yourself.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" id="connectGmailBtn">Connect Gmail</button><button class="btn" id="disconnectGmailBtn" style="display:none">Disconnect Gmail</button><button class="btn" id="refreshGmailBtn">Refresh status</button></div><p id="gmailMessage" class="stat-note" role="status" style="margin-top:14px">Connect Gmail to enable saving drafts directly to your mailbox.</p></div><div class="card"><h2>Privacy & safety</h2><p class="stat-note" style="line-height:1.8">Google authorization is handled by a Supabase Edge Function. OAuth refresh tokens stay encrypted server-side. Never paste secrets or service-role keys into this page or GitHub.</p></div></section>
@@ -111,7 +111,7 @@ const SUPABASE_URL="https://kpqjdegogmxwmujvolho.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_wKR47lrTUT4-W0hO6SZhtA_3F1BpmwD";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 let leads=[];let nextId=1;let currentUser=null;const $=id=>document.getElementById(id);
-function fromDb(row){return {id:row.id,name:row.name||"",business:row.company||"",service:row.service_needed||"",email:row.email||"",budget:Number(row.budget)||0,status:row.status||"New",date:row.follow_up_date||"",notes:row.notes||"",score:Number(row.score)||Math.min(90,50+(Number(row.budget)>20000?15:0)+(["New","Follow-up"].includes(row.status)?10:0))}}
+function fromDb(row){const estimate=Number(row.score)||Math.min(90,50+(Number(row.budget)>20000?15:0)+(["New","Follow-up"].includes(row.status)?10:0));return {id:row.id,name:row.name||"",business:row.company||"",service:row.service_needed||"",email:row.email||"",budget:Number(row.budget)||0,status:row.status||"New",date:row.follow_up_date||"",notes:row.notes||"",score:Number(row.ai_score)||estimate,aiScore:row.ai_score===null||row.ai_score===undefined?null:Number(row.ai_score),aiCategory:row.ai_category||"",aiReason:row.ai_score_reason||"",aiNextAction:row.ai_next_action||"",aiScoredAt:row.ai_scored_at||null}}
 function toDb(l){return {user_id:currentUser.id,name:l.name,company:l.business,email:l.email||null,service_needed:l.service,budget:l.budget,status:l.status,follow_up_date:l.date||null,notes:l.notes}}
 async function save(){render()}
 function authMessage(msg,isError=false){$("authMessage").textContent=msg;$("authMessage").style.color=isError?"#ff8290":"#9aa9c2"}
@@ -178,7 +178,7 @@ function render(){
  $("draftList").innerHTML=draftable.map(l=>`<div class="queue-item"><div><strong>${esc(l.name)} · ${esc(l.business)}</strong><p>${esc(l.service||"Service not set")} · ${badge(l.status)}</p></div><button class="btn" onclick="showDraft(${l.id})">View draft →</button></div>`).join("")||`<div class="empty">No open leads need a draft right now.</div>`;
  filterLeads();
 }
-function filterLeads(){const q=($("leadSearch").value||"").toLowerCase(),s=$("statusFilter").value;let found=leads.filter(l=>(!s||l.status===s)&&[l.name,l.business,l.service].join(" ").toLowerCase().includes(q));$("leadsTable").innerHTML=found.map(l=>`<tr><td><div class="person"><div class="avatar">${initials(l.name)}</div><div><strong>${esc(l.name)}</strong><small>${esc(l.business)}</small></div></div></td><td>${esc(l.service||"—")}</td><td>${money(l.budget)}</td><td>${badge(l.status)}</td><td>${fmtDate(l.date)}</td><td><span class="score ${scoreClass(priority(l))}">${priority(l)}</span></td><td><button class="btn" onclick="editLead(${l.id})">Edit</button> <button class="btn" onclick="deleteLead(${l.id})" aria-label="Delete ${esc(l.name)}">×</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No matching leads found.</td></tr>`}
+function filterLeads(){const q=($("leadSearch").value||"").toLowerCase(),s=$("statusFilter").value;let found=leads.filter(l=>(!s||l.status===s)&&[l.name,l.business,l.service].join(" ").toLowerCase().includes(q));$("leadsTable").innerHTML=found.map(l=>`<tr><td><div class="person"><div class="avatar">${initials(l.name)}</div><div><strong>${esc(l.name)}</strong><small>${esc(l.business)}</small></div></div></td><td>${esc(l.service||"—")}</td><td>${money(l.budget)}</td><td>${badge(l.status)}</td><td>${fmtDate(l.date)}</td><td><span class="score ${scoreClass(priority(l))}">${priority(l)}</span></td><td><button class="btn" onclick="scoreLead(${l.id})">✨ AI score</button> <button class="btn" onclick="editLead(${l.id})">Edit</button> <button class="btn" onclick="deleteLead(${l.id})" aria-label="Delete ${esc(l.name)}">×</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No matching leads found.</td></tr>`}
 const titles={overview:["Good to see you.","A clearer view of your pipeline, priorities, and next follow-ups."],leads:["All leads","Keep prospect details and follow-up dates in one place."],priority:["Lead priority","A focused view of which open conversations may need attention."],followups:["Follow-up queue","Know who to contact next and why."],drafts:["AI message drafts","Personalized starter messages to review before sending."],settings:["Integrations","Connect the tools you use to follow up with leads."]};
 function go(view){document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===view));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));$("pageTitle").textContent=titles[view][0];$("pageSubtitle").textContent=titles[view][1];window.scrollTo({top:0,behavior:"smooth"})}
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view))); $("mobileMenuBtn").onclick=()=>{
@@ -193,6 +193,35 @@ function openModal(l){$("leadForm").reset();$("editId").value=l?l.id:"";$("modal
 function editLead(id){let l=leads.find(x=>String(x.id)===String(id));if(l)openModal(l)}
 async function deleteLead(id){let l=leads.find(x=>String(x.id)===String(id));if(l&&confirm(`Delete ${l.name} from your LeadPilot account?`)){const {error}=await sb.from("leads").delete().eq("id",id).eq("user_id",currentUser.id);if(error){toast("Delete failed: "+error.message);return}leads=leads.filter(x=>String(x.id)!==String(id));render();toast("Lead deleted.")}}
  
+async function scoreLead(id){
+  if(!currentUser){toast("Please sign in first.");return}
+  const lead=leads.find(x=>String(x.id)===String(id));
+  if(!lead)return;
+  if(!confirm(`Generate an AI score for ${lead.name}?`))return;
+  toast("AI is analysing this lead...");
+  try{
+    const {data,error}=await sb.functions.invoke("score-lead",{body:{leadId:String(id)}});
+    if(error)throw new Error(error.message||"AI scoring request failed.");
+    if(data?.error)throw new Error(data.error);
+    if(!data?.success||!data?.lead)throw new Error("No scoring result returned.");
+    const updated=data.lead;
+    leads=leads.map(item=>String(item.id)===String(id)?{
+      ...item,
+      aiScore:Number(updated.ai_score),
+      score:Number(updated.ai_score),
+      aiCategory:updated.ai_category||"",
+      aiReason:updated.ai_score_reason||"",
+      aiNextAction:updated.ai_next_action||"",
+      aiScoredAt:updated.ai_scored_at||null
+    }:item);
+    render();
+    toast(`AI score: ${updated.ai_score}/100 · ${updated.ai_category}`);
+    alert(`AI score: ${updated.ai_score}/100 (${updated.ai_category})\n\nReason: ${updated.ai_score_reason||"Not provided"}\n\nNext action: ${updated.ai_next_action||"Review this lead."}`);
+  }catch(error){
+    console.error("Lead scoring error:",error);
+    toast("AI scoring failed: "+(error.message||"Please try again."));
+  }
+}
 async function gmailCall(action,payload={}){if(!currentUser)throw new Error("Please sign in first.");const {data,error}=await sb.functions.invoke("gmail-oauth",{body:{action,...payload}});if(error)throw new Error(error.message||"Gmail request failed");if(data?.error)throw new Error(data.error);return data||{}}
 async function refreshGmailStatus(){try{const d=await gmailCall("status");const connected=!!d.connected;$("gmailStatus").textContent=connected?`Connected${d.email?": "+d.email:""}`:"Not connected";$("gmailStatus").className="pill "+(connected?"green":"amber");$("connectGmailBtn").style.display=connected?"none":"inline-block";$("disconnectGmailBtn").style.display=connected?"inline-block":"none";$("gmailMessage").textContent=connected?"Gmail is connected. Follow-up drafts can be saved to this mailbox.":"Connect Gmail to enable saving drafts directly in Gmail."}catch(e){$("gmailStatus").textContent="Setup required";$("gmailMessage").textContent=e.message+". Check the Gmail Edge Function setup."}}
 $("connectGmailBtn").onclick=async()=>{const b=$("connectGmailBtn");b.disabled=true;$("gmailMessage").textContent="Preparing Google authorization…";try{const d=await gmailCall("connect");if(!d.authUrl)throw new Error("No Google authorization URL returned.");location.href=d.authUrl}catch(e){$("gmailMessage").textContent=e.message;b.disabled=false}};
