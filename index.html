@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080d1b">\n<meta name="description" content="LeadPilot — secure lead management and follow-up workspace.">\n<meta name="leadpilot-build" content="2026.11-safe-update-1">
+<meta name="theme-color" content="#080d1b">\n<meta name="description" content="LeadPilot — secure lead management and follow-up workspace.">\n<meta name="leadpilot-build" content="2026.11-whatsapp-phone-1">
 <title>LeadPilot — Lead Recovery Workspace</title>
 <style>
 :root{--bg:#080d1b;--panel:#10182a;--panel2:#131f35;--line:#25314a;--text:#eef4ff;--muted:#9aa9c2;--blue:#5794ff;--cyan:#55d7f3;--green:#4adea3;--amber:#ffc66d;--red:#ff8290}
@@ -93,7 +93,8 @@ margin:8px 0;
   <form id="leadForm"><input type="hidden" id="editId"><div class="form-grid">
    <div class="form-group"><label for="name">Contact name *</label><input class="field" id="name" required maxlength="80" placeholder="e.g. Alex Morgan"></div>
    <div class="form-group"><label for="business">Business / company *</label><input class="field" id="business" required maxlength="100" placeholder="e.g. Bright Studio"></div>
-   <div class="form-group"><label for="email">Contact email</label><input class="field" id="email" type="email" maxlength="254" placeholder="alex@example.com"></div>\n   <div class="form-group"><label for="service">Service needed</label><input class="field" id="service" maxlength="100" placeholder="e.g. Website redesign"></div>
+   <div class="form-group"><label for="email">Contact email</label><input class="field" id="email" type="email" maxlength="254" placeholder="alex@example.com"></div>\n   <div class="form-group"><label for="phone">WhatsApp number</label><input class="field" id="phone" type="tel" inputmode="tel" maxlength="20" placeholder="+91 98765 43210"><small style="color:var(--muted)">Include country code. Optional.</small></div>
+   <div class="form-group"><label for="service">Service needed</label><input class="field" id="service" maxlength="100" placeholder="e.g. Website redesign"></div>
    <div class="form-group"><label for="budget">Budget (number)</label><input class="field" id="budget" type="number" min="0" placeholder="15000"></div>
    <div class="form-group"><label for="status">Lead status</label><select class="field" id="status"><option>New</option><option>Contacted</option><option>Follow-up</option><option>Won</option><option>Lost</option></select></div>
    <div class="form-group"><label for="date">Follow-up date</label><input class="field" id="date" type="date"></div>
@@ -118,8 +119,8 @@ const SUPABASE_URL="https://kpqjdegogmxwmujvolho.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_wKR47lrTUT4-W0hO6SZhtA_3F1BpmwD";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 let leads=[];let nextId=1;let currentUser=null;const $=id=>document.getElementById(id);
-function fromDb(row){const estimate=Number(row.score)||Math.min(90,50+(Number(row.budget)>20000?15:0)+(["New","Follow-up"].includes(row.status)?10:0));return {id:row.id,name:row.name||"",business:row.company||"",service:row.service_needed||"",email:row.email||"",budget:Number(row.budget)||0,status:row.status||"New",date:row.follow_up_date||"",notes:row.notes||"",score:Number(row.ai_score)||estimate,aiScore:row.ai_score===null||row.ai_score===undefined?null:Number(row.ai_score),aiCategory:row.ai_category||"",aiReason:row.ai_score_reason||"",aiNextAction:row.ai_next_action||"",aiScoredAt:row.ai_scored_at||null}}
-function toDb(l){return {user_id:currentUser.id,name:l.name,company:l.business,email:l.email||null,service_needed:l.service,budget:l.budget,status:l.status,follow_up_date:l.date||null,notes:l.notes}}
+function fromDb(row){const estimate=Number(row.score)||Math.min(90,50+(Number(row.budget)>20000?15:0)+(["New","Follow-up"].includes(row.status)?10:0));return {id:row.id,name:row.name||"",business:row.company||"",service:row.service_needed||"",email:row.email||"",phone:row.phone||"",budget:Number(row.budget)||0,status:row.status||"New",date:row.follow_up_date||"",notes:row.notes||"",score:Number(row.ai_score)||estimate,aiScore:row.ai_score===null||row.ai_score===undefined?null:Number(row.ai_score),aiCategory:row.ai_category||"",aiReason:row.ai_score_reason||"",aiNextAction:row.ai_next_action||"",aiScoredAt:row.ai_scored_at||null}}
+function toDb(l){return {user_id:currentUser.id,name:l.name,company:l.business,email:l.email||null,phone:l.phone||null,service_needed:l.service,budget:l.budget,status:l.status,follow_up_date:l.date||null,notes:l.notes}}
 async function save(){render()}
 function authMessage(msg,isError=false){$("authMessage").textContent=msg;$("authMessage").style.color=isError?"#ff8290":"#9aa9c2"}
 async function loadLeads(){const {data,error}=await sb.from("leads").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false});if(error){toast("Could not load leads: "+error.message);return}leads=(data||[]).map(fromDb);nextId=leads.length+1;render()}
@@ -196,7 +197,7 @@ document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",(
 document.querySelector(".nav").classList.remove("open");
 $("mobileMenuBtn").textContent="☰ Menu";
 }));document.querySelectorAll("[data-goto]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.goto)));
-function openModal(l){$("leadForm").reset();$("editId").value=l?l.id:"";$("modalTitle").textContent=l?"Edit lead":"Add a lead";if(l){$("name").value=l.name;$("business").value=l.business;$("service").value=l.service||"";$("email").value=l.email||"";$("budget").value=l.budget||"";$("status").value=l.status;$("date").value=l.date||"";$("notes").value=l.notes||""} $("leadModal").classList.add("open");$("name").focus()}
+function openModal(l){$("leadForm").reset();$("editId").value=l?l.id:"";$("modalTitle").textContent=l?"Edit lead":"Add a lead";if(l){$("name").value=l.name;$("business").value=l.business;$("service").value=l.service||"";$("email").value=l.email||"";$("phone").value=l.phone||"";$("budget").value=l.budget||"";$("status").value=l.status;$("date").value=l.date||"";$("notes").value=l.notes||""} $("leadModal").classList.add("open");$("name").focus()}
 function editLead(id){let l=leads.find(x=>String(x.id)===String(id));if(l)openModal(l)}
 async function deleteLead(id){let l=leads.find(x=>String(x.id)===String(id));if(l&&confirm(`Delete ${l.name} from your LeadPilot account?`)){const {error}=await sb.from("leads").delete().eq("id",id).eq("user_id",currentUser.id);if(error){toast("Delete failed: "+error.message);return}leads=leads.filter(x=>String(x.id)!==String(id));render();toast("Lead deleted.")}}
  
@@ -281,6 +282,7 @@ function showDraft(id){
 
     <div class="form-actions">
       <button class="btn" id="copyDraft">Copy message</button>
+      <button class="btn" id="sendWhatsAppDraft">Send WhatsApp</button>
       <button class="btn primary" id="saveGmailDraft">Save to Gmail drafts</button>
     </div>
   `;
@@ -345,6 +347,26 @@ function showDraft(id){
     }
   };
 
+  $("sendWhatsAppDraft").onclick=async()=>{
+    const btn=$("sendWhatsAppDraft");
+    if(!l.phone){toast("Add this lead’s WhatsApp number (with country code) first, then save the lead.");return;}
+    const message=textarea.value.trim();
+    if(!message){toast("Write a message before sending.");return;}
+    if(!currentUser){toast("Please sign in first.");return;}
+    btn.disabled=true;btn.textContent="Sending…";
+    try{
+      const {data,error}=await sb.functions.invoke("whatsapp-send",{body:{to:l.phone,message}});
+      if(error)throw new Error(error.message||"WhatsApp request failed");
+      if(!data?.success)throw new Error(typeof data?.error==="string"?data.error:JSON.stringify(data?.error||"Message was not accepted."));
+      aiStatus.textContent="✓ Meta accepted the WhatsApp message request. Delivery status may update separately.";
+      toast("WhatsApp message accepted by Meta.");
+    }catch(err){
+      console.error("WhatsApp send error:",err);
+      toast("WhatsApp: "+err.message);
+      aiStatus.textContent="WhatsApp message was not confirmed. Check the number, test-recipient access, and Edge Function logs.";
+    }finally{btn.disabled=false;btn.textContent="Send WhatsApp";}
+  };
+
   $("saveGmailDraft").onclick=async()=>{
     const btn=$("saveGmailDraft");
     const body=textarea.value;
@@ -370,9 +392,9 @@ function showDraft(id){
  }
 
 $("addLeadBtn").onclick=()=>openModal();$("cancelModal").onclick=()=>$("leadModal").classList.remove("open");$("leadModal").addEventListener("click",e=>{if(e.target===$("leadModal"))$("leadModal").classList.remove("open")});
-$("leadForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser){toast("Please sign in first.");return}let id=$("editId").value,old=leads.find(l=>String(l.id)===String(id));let l={id:id||null,name:$("name").value.trim(),business:$("business").value.trim(),email:$("email").value.trim(),service:$("service").value.trim(),budget:Number($("budget").value)||0,status:$("status").value,date:$("date").value,notes:$("notes").value.trim(),score:old?old.score:Math.min(90,50+(Number($("budget").value)>20000?15:0)+(["New","Follow-up"].includes($("status").value)?10:0))};let query=sb.from("leads");let result=old?await query.update(toDb(l)).eq("id",old.id).eq("user_id",currentUser.id).select().single():await query.insert(toDb(l)).select().single();if(result.error){toast("Could not save lead: "+result.error.message);return}const saved=fromDb(result.data);if(old)leads=leads.map(x=>String(x.id)===String(old.id)?saved:x);else leads.unshift(saved);$("leadModal").classList.remove("open");render();go("leads");toast(old?"Lead updated.":"Lead saved to your account.")});
+$("leadForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser){toast("Please sign in first.");return}let id=$("editId").value,old=leads.find(l=>String(l.id)===String(id));let l={id:id||null,name:$("name").value.trim(),business:$("business").value.trim(),email:$("email").value.trim(),phone:$("phone").value.trim(),service:$("service").value.trim(),budget:Number($("budget").value)||0,status:$("status").value,date:$("date").value,notes:$("notes").value.trim(),score:old?old.score:Math.min(90,50+(Number($("budget").value)>20000?15:0)+(["New","Follow-up"].includes($("status").value)?10:0))};let query=sb.from("leads");let result=old?await query.update(toDb(l)).eq("id",old.id).eq("user_id",currentUser.id).select().single():await query.insert(toDb(l)).select().single();if(result.error){toast("Could not save lead: "+result.error.message);return}const saved=fromDb(result.data);if(old)leads=leads.map(x=>String(x.id)===String(old.id)?saved:x);else leads.unshift(saved);$("leadModal").classList.remove("open");render();go("leads");toast(old?"Lead updated.":"Lead saved to your account.")});
 $("leadSearch" ).addEventListener("input",filterLeads);$("statusFilter").addEventListener("change",filterLeads);
-$("exportBtn").onclick=()=>{const rows=[["Name","Business","Email","Service","Budget","Status","Follow-up date","Notes","Priority estimate"],...leads.map(l=>[l.name,l.business,l.email,l.service,l.budget,l.status,l.date,l.notes,l.score])];const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));a.download="leadpilot-leads.csv";a.click();URL.revokeObjectURL(a.href);toast("CSV export started.")};
+$("exportBtn").onclick=()=>{const rows=[["Name","Business","Email","Phone","Service","Budget","Status","Follow-up date","Notes","Priority estimate"],...leads.map(l=>[l.name,l.business,l.email,l.phone,l.service,l.budget,l.status,l.date,l.notes,l.score])];const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));a.download="leadpilot-leads.csv";a.click();URL.revokeObjectURL(a.href);toast("CSV export started.")};
 let toastTimer;function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),2800)}
 </script>
 </body>
